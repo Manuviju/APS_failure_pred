@@ -21,6 +21,7 @@ import pandas as pd
 from pandas import DataFrame
 from sensor.ml.metric.classification_metric import get_classification_score
 from sensor.ml.model.estimator import SensorModel
+from sklearn.metrics import accuracy_score
 
 # if __name__=='__main__':
 #     training_pipeline = TrainPipeline()
@@ -88,7 +89,7 @@ async def upload(file: UploadFile = File(...)):
         df['predicted_column'] = y_pred
         df['predicted_column'].replace(TargetValueMapping().reverse_mapping(),inplace=True)
         y_true = data[TARGET_COLUMN]
-        accuracy = model.accuracy(y_true, y_pred)
+        accuracy = model.accuracy_score(y_true, y_pred)
         return accuracy
     #     #decide how to return file to user.
         
