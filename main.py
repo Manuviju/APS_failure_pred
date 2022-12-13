@@ -64,7 +64,7 @@ async def train_route():
     except Exception as e:
         return Response(f"Error Occurred! {e}")
 
-@app.get("/predict")
+@app.post("/predict")
 async def upload(file: UploadFile = File(...)):
     try:
         contents = file.file.read()
