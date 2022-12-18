@@ -17,11 +17,14 @@ from sensor.ml.model.estimator import ModelResolver,TargetValueMapping
 from sensor.utils.main_utils import load_object
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import numpy as np
 import pandas as pd
 from pandas import DataFrame
 from sensor.ml.metric.classification_metric import get_classification_score
 from sensor.ml.model.estimator import SensorModel
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score,f1_score
+from imblearn.combine import SMOTETomek
+from sensor.components.data_transformation import DataTransformation
 
 # if __name__=='__main__':
 #     training_pipeline = TrainPipeline()
@@ -65,36 +68,33 @@ async def train_route():
     except Exception as e:
         return Response(f"Error Occurred! {e}")
 
-@app.post("/predict")
-async def upload(file: UploadFile = File(...)):
-    try:
-        contents = file.file.read()
-        buffer = BytesIO(contents)
-        data = pd.read_csv(buffer)
-        buffer.close()
-        file.file.close()
-        
-        # get data from user csv file
-        # conver csv file to dataframe
 
-        df = data.drop(['class'], axis=1,inplace=True)
+@app.post("/prediction/")
+async def upload_file(csv_file: UploadFile = File(...)):
+    try:
+        data = pd.read_csv(csv_file.file)
+        y_true = data[TARGET_COLUMN].replace(TargetValueMapping().to_dict())
+        df = data.drop(columns=[TARGET_COLUMN], axis=1)
+       
         model_resolver = ModelResolver(model_dir=SAVED_MODEL_DIR)
         if not model_resolver.is_model_exists():
             return Response("Model is not available")
         
         best_model_path = model_resolver.get_best_model_path()
-        model = load_object(file_path=best_model_path)
+        model = load_object(file_path=best_model_path)  
         
-        y_pred = model.predict(df)
-        df['predicted_column'] = y_pred
-        df['predicted_column'].replace(TargetValueMapping().reverse_mapping(),inplace=True)
-        y_true = data[TARGET_COLUMN]
-        accuracy = model.accuracy_score(y_true, y_pred)
+        y_predict = model.predict(df)
+          
+        
+        
+        # y_pred.replace(TargetValueMapping().reverse_mapping(),inplace=True)
+        
+        accuracy = get_classification_score(y_true, y_predict)
         return accuracy
-    #     #decide how to return file to user.
-        
+
     except Exception as e:
-        raise Response(f"Error Occured! {e}")
+        raise SensorException(e, sys)
+
 
 def main():
     try:
